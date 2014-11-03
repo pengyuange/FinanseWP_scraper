@@ -1,7 +1,9 @@
 '''Code needs a lot of work - it's just made to work.'''
 import Tkinter as tk
 import csv
+
 from finanse_wp import *
+
 
 nameAr = []
 codeAr = []
@@ -9,17 +11,19 @@ codeAr = []
 with open('indicators.csv', 'r') as csvfile:
     reader = csv.reader(csvfile, delimiter=';')
     for row in reader:
-    	nameAr.append(row[0])
-    	codeAr.append(row[1])
+        nameAr.append(row[0])
+        codeAr.append(row[1])
+
 
 def select():
-	# draw a chart
-	index = nameAr.index(name_var.get())
-	stock_id = codeAr[index]
-	try:
-		graphData(stock_id, 20, 200)
-	except Exception as e:
-		print 'Something went wrong.\nError details: ', e
+    # draw a chart
+    index = nameAr.index(name_var.get())
+    stock_id = codeAr[index]
+    try:
+        graphData(stock_id, 20, 200)
+    except Exception as e:
+        print 'Something went wrong.\nError details: ', e
+
 
 root = tk.Tk()
 # use width x height + x_offset + y_offset (no spaces!)
