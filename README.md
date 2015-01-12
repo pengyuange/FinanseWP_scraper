@@ -6,7 +6,7 @@ INFO:
 Python scripts, which get stocks data from finanse.wp.pl
 
 NOTES:
-- 12/01/2014 Refactored parse_stocks module. Added list compehensions and a few improvements to make the code run faster.
+- 12/01/2015 Refactored parse_stocks module. Added list compehensions and a few improvements to make the code run faster.
 - 31/12/2014 Refactored all files, now the usage is much simplier. The API has changed.
 - You should get wp.pl permission before using this script.
 
