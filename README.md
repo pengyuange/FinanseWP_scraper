@@ -1,10 +1,10 @@
 FinanseWP Scraper
 =============================
-Python scripts used to get stock and fund data from finanse.wp.pl service.
+
 
 INFO:
 
-Python scripts, which get stocks data from finanse.wp.pl
+Python scripts, which may be used to get stock and fund data from finanse.wp.pl service.
 
 NOTES:
 - 12/01/2015 Refactored parse_stocks module. Added list compehensions and a few improvements to make the code run faster.
