@@ -1,42 +1,57 @@
-"""
-The module contains a set of functions designed to help with scraping stock
-data from finanse.wp.pl website.
-Author: Adam Giermanowski
-"""
+'''
+Copyright (c) 2014 Adam Giermanowski
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+'''
 
 import urllib2
 import datetime
 from xml.dom import minidom
 
 
-def prepareData(stockName, timeRange, interval):
-    """ Prepares stock data to be drawn on a chart. Takes whole stock data and returns only price and date lists.
+def _format_date(date_str):
+    datetime.datetime.strptime(date_str, "%Y-%m-%d")
+    return date_str
 
-    :param stockName: stock to be displayed
-    :param timeRange: data time range
-    :param interval: data interval
+
+def get_date_and_price_data(stock_name, time_range, interval):
+    """ Returns two lists: dates and prices.
+
+    :param stock_name: stock to be displayed
+    :param time_range: data time range. example: 1D, 1M, 3M, 1R, 3R, OP. NOT ALL timeRange/interval pairs work!
+    :param interval: data interval. example: 1day, 1min, 30min. NOT ALL timeRange/interval pairs work!
     :return: price and date lists
     """
     try:
-        stockID = getIDforStock(stockName)
-        print "Downloading data..."
-        stockData = getStockData(stockID, timeRange, interval) # TODO describe params
+        stock_id = get_id_for_stock(stock_name)
+        stock_data = get_stock_data(stock_id, time_range, interval)
 
-        dates = []
-        prices = []
-
-        for day in stockData:
-            dates.append(day[0])
-            prices.append(day[1])
+        dates = [day[0] for day in stock_data]
+        prices = [day[1] for day in stock_data]
 
         return dates, prices
 
     except Exception, e:
-        print "Could not get the stock."
-        print e
+        print "Could not get the stock.", e
 
 
-def getStockNames():
+def get_stock_names():
     """ Parses an XML document with stock names and their IDs on finanse.wp.pl website.
 
     :return: list names, list ids.
@@ -45,109 +60,90 @@ def getStockNames():
     dom = minidom.parse(page)
     stocks = dom.getElementsByTagName('item')
 
-    names = []
-    ids = []
-
-    for name in stocks:
-        names.append(str(name.getAttribute('name')))
-        ids.append(str(name.getAttribute('value')))
+    names = [str(name.getAttribute('name')) for name in stocks]
+    ids = [str(name.getAttribute('value')) for name in stocks]
 
     return names, ids
 
 
-
-def getIDforStock(stockName):
+def get_id_for_stock(stock_name):
     """ Tries to find stock ID assigned to given universal stock name on finanse.wp.pl.
 
-    :param stockName: Universal name(symbol) of stock on WSE(GPW). Examples: PKNORLEN, CDPROJEKT
+    :param stock_name: Universal name(symbol) of stock on WSE(GPW). Examples: PKNORLEN, CDPROJEKT
     :return: Returns stock ID on wp.pl
     """
-    names, ids = getStockNames()
+    names, ids = get_stock_names()
     i = 0
     for name in names:
-        if name == stockName:
+        if name == stock_name:
             return ids[i]
         i+=1
     return "Could not find the stock."
 
 
-
-def getStockData(stockID, timeRange, interval):
+def get_stock_data(stock_id, time_range="1R", interval="1d"):
     """ Downloads and parses stock data for the given stock ID.
 
-    :param stockID: wp.pl stock ID.
-    :param timeRange: example: 1D, 1M, 3M, 1R, 3R. NOT ALL timeRange/interval pairs work!
-    :param interval: example: 1day, 1min, 30min. NOT ALL timeRange/interval pairs work!
+    :param stock_id: wp.pl stock ID.
+    :param time_range: example: 1D, 1M, 3M, 1R, 3R, OP. NOT ALL time_range/interval pairs work!
+    :param interval: example: 1day, 1min, 30min. NOT ALL time_range/interval pairs work!
     :return: a list of lists with stock data day by day
     """
-    url = 'http://finanse.wp.pl/isin,' + stockID + ',range,' + timeRange + ',split,1,int,' + interval + ',graphdata.xml'
+    url = 'http://finanse.wp.pl/isin,' + stock_id + ',range,' + time_range + ',split,1,int,' + interval + ',graphdata.xml'
 
     print "Visited URL: " + url
 
     xml = urllib2.urlopen(url)
     dom = minidom.parse(xml)
-    dataByDays = dom.getElementsByTagName('item')
+    xml_data = dom.getElementsByTagName('item')
 
-    dates, closePrices, highPrices, lowPrices, openPrices, volume = [], [], [], [], [], []
+    dates = [_format_date(day.getAttribute('time').split(' ')[0]) for day in xml_data]
+    close_prices = [float(day.getAttribute('kurs1_2')) for day in xml_data]
+    high_prices = [float(day.getAttribute('max')) for day in xml_data]
+    low_prices = [float(day.getAttribute('min')) for day in xml_data]
+    open_prices = [float(day.getAttribute('kurs1_1')) for day in xml_data]
+    volume = [float(day.getAttribute('vol')) for day in xml_data]
 
-    for day in dataByDays:
-        raw_day = day.getAttribute('time').split(' ')[0]
-        day_formatted = datetime.datetime.strptime(raw_day, "%Y-%m-%d")  # 2011-11-14
-        dates.append(day_formatted)
-        closePrices.append(float(day.getAttribute('kurs1_2')))
-        highPrices.append(float(day.getAttribute('max')))
-        lowPrices.append(float(day.getAttribute('min')))
-        openPrices.append(float(day.getAttribute('kurs1_1')))
-        volume.append(float(day.getAttribute('vol')))
+    parsed_data = []
 
-    returnList = []
-
-    i = 0
     for date in dates:
-        dayItem = [date, closePrices[i], highPrices[i], lowPrices[i], openPrices[i], volume[i]]
-        returnList.append(dayItem)
-        i += 1
+        parsed_data.append([date, close_prices[date], high_prices[date], low_prices[date], open_prices[date], volume[date]])
 
-    return returnList
+    return parsed_data
 
 
-
-def saveStockDataToFile(stockID, timeRange, interval):
+def save_data_to_file(stock_id, time_range, interval):
     """ Saves stock data to a text file.
 
-    :param stockID: wp.pl stock ID.
+    :param stock_id: wp.pl stock ID.
     :return: Saves "workfile.txt"
     """
-    stockData = getStockData(stockID)  # TODO FIX PARAMS
+    stock_data = get_stock_data(stock_id, time_range, interval)
     f = open("output.txt", "w")
 
-    for listItem in stockData:
-        f.write(str(listItem) + "\n")
+    for day in stock_data:
+        f.write(str(day) + "\n")
 
 
-
-def calculatePercentChange(stockID, date1, date2):
+def calculate_percent_change(stock_id, date1, date2):
     """ Calculates percent change between two days for a given stock.
 
-    :param stockID: wp.pl stock ID.
+    :param stock_id: wp.pl stock ID.
     :param date1: First Date. Datetime date format.
     :param date2: Second Date. Datetime date format
     :return: returns percent change.
     """
-    data = getStockData(stockID) # TODO FIX PARAMS
-    dates = []
-    prices = []
+    data = get_stock_data(stock_id, 'OP', '1d')
 
-    for day in data:
-        dates.append(day[0])
-        prices.append(day[1])
+    dates = [day[0] for day in data]
+    prices = [day[1] for day in data]
 
     try:
-        priceAtDate1 = prices[dates.index(date1)]
-        priceAtDate2 = prices[dates.index(date2)]
-    except:
-        print "Could not find any data. Is it weekend day?"
+        price_at_date1 = prices[dates.index(date1)]
+        price_at_date2 = prices[dates.index(date2)]
+    except Exception, e:
+        print "Could not find any data. Is it weekend day?", e
 
-    percentChange = (priceAtDate2 - priceAtDate1)/priceAtDate1
+    percentChange = (price_at_date2 - price_at_date1)/price_at_date1
 
     return percentChange
