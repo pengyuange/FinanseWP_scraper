@@ -3,6 +3,7 @@ FinanseWP Scraper
 Python scripts used to get stock and fund data from finanse.wp.pl service.
 
 INFO:
+
 Python scripts, which get stocks data from finanse.wp.pl
 
 NOTES:
