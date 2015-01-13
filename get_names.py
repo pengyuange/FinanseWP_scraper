@@ -25,8 +25,8 @@ import csv
 import urllib2
 from xml.dom import minidom
 
-def getStockNames():
-    """ Parses an XML document with stock names and their IDs on finanse.wp.pl website.
+def get_stock_names():
+    """ Returns 2 lists - fund names and fund IDs
 
     :return: list names, list ids.
     """
@@ -34,60 +34,56 @@ def getStockNames():
         page = urllib2.urlopen("http://finanse.wp.pl/isin,PLOPTTC00019,stocks.xml")
         dom = minidom.parse(page)
         stocks = dom.getElementsByTagName('item')
-    except Exception, e:
-        print "Could not parse stocks from: http://finanse.wp.pl/isin,PLOPTTC00019,stocks.xml"
-        print e
+    except:
+        raise Exception('Could not parse stocks from: http://finanse.wp.pl/isin,PLOPTTC00019,stocks.xml')
 
-    names = []
-    ids = []
-
-    for name in stocks:
-        names.append(str(name.getAttribute('name')))
-        ids.append(str(name.getAttribute('value')))
+    names = [str(name.getAttribute('name')) for name in stocks]
+    ids = [str(name.getAttribute('value')) for name in stocks]
 
     return names, ids
 
 
-def saveStockNamesToFile():
-    names, ids = getStockNames()
+def get_stock_names_csv():
+    """ Saves a list of stock names to csv
+    """
+
+    names, ids = get_stock_names()
 
     try:
-        os.remove(u'PATH/TO/CSV.csv')
+        os.remove('names.csv')
     except:
         pass
 
     lists = zip(names, ids)
-    with open(u'PATH/TO/CSV.csv', 'w') as csvfile:
-        csv_writer = csv.writer(csvfile)
+    with open('names.csv', 'w') as file:
+        csv_writer = csv.writer(file)
         csv_writer.writerows(lists)
 
 
-def getFundsNames():
-    """ Gets 2 lists - fund names and fund IDs in finanse.wp.pl
+def get_fund_names():
+    """ Returns 2 lists - fund names and fund IDs
     """
     page = urllib2.urlopen("http://finanse.wp.pl/fundslist.xml")
     dom = minidom.parse(page)
     funds = dom.getElementsByTagName('item')
 
-    names = []
-    ids = []
-
-    for fund in funds:
-        names.append(str(fund.getAttribute('name').encode('utf-8')))
-        ids.append(str(fund.getAttribute('value').encode('utf-8')))
+    names = [str(fund.getAttribute('name').encode('utf-8')) for fund in funds]
+    ids = [str(fund.getAttribute('value').encode('utf-8')) for fund in funds]
 
     return names, ids
 
 
-def saveFundNamesToFile():
-        names, ids = getFundsNames()
+def get_fund_names_csv():
+    """ Saves a list of fund names to csv
+    """
+    names, ids = get_fund_names()
 
-        try:
-            os.remove(u'PATH/TO/CSV.csv')
-        except:
-            pass
+    try:
+        os.remove('funds.csv')
+    except:
+        pass
 
-        lists = zip(names, ids)
-        with open(u'PATH/TO/CSV.csv', 'w') as csvfile:
-            csv_writer = csv.writer(csvfile)
-            csv_writer.writerows(lists)
+    lists = zip(names, ids)
+    with open('funds.csv', 'w') as file:
+        csv_writer = csv.writer(file)
+        csv_writer.writerows(lists)

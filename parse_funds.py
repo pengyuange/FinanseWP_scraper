@@ -24,93 +24,65 @@ import urllib2
 from xml.dom import minidom
 import datetime
 
-def getFundsList():
-    """ Gets 2 lists - fund names and fund IDs in finanse.wp.pl
-    """
-    page = urllib2.urlopen("http://finanse.wp.pl/fundslist.xml")
-    dom = minidom.parse(page)
-    funds = dom.getElementsByTagName('item')
-
-    names = []
-    ids = []
-
-    for fund in funds:
-        names.append(str(fund.getAttribute('name').encode('utf-8')))
-        ids.append(str(fund.getAttribute('value').encode('utf-8')))
-
-    return names, ids
+import get_names
 
 
-def getIDforFund(fundName):
+def _format_date(date_str):
+    datetime.datetime.strptime(date_str, "%Y-%m-%d")
+    return date_str
+
+
+def get_id_for_fund(fund_name):
     """ Tries to find stock ID assigned to given fund name on finanse.wp.pl.
 
-    :param stockName: Descriptive name of fund. Examples: Agio Market Neutral FIZ
+    :param fund_name: Descriptive name of fund. Examples: Agio Market Neutral FIZ
     :return: Returns fund ID on finanse.wp.pl
     """
-    names, ids = getFundsList()
-    i = 0
-    for name in names:
-        if name == fundName:
-            return ids[i]
-        i += 1
-    return "Could not find the fund."
+    names, ids = get_names.get_fund_names()
+    if fund_name in names:
+        index = names.index(fund_name)
+        return ids[index]
+    else:
+        raise Exception('No fund found.')
 
 
-def getFundData(fundID, timeRange="1R", interval="1day"):
+def get_fund_data(fund_id, time_range="1R", interval="1day"):
     """ Downloads and parses fund data for the given fund ID.
 
-    :param fundID: finanse.wp.pl fund ID.
-    :param timeRange: example: 1R. NOT ALL timeRange/interval pairs work!
-    :param interval: example: 1day. NOT ALL timeRange/interval pairs work!
+    :param fund_id: finanse.wp.pl fund ID.
+    :param time_range: example: 1R. NOT ALL time_range/interval pairs work!
+    :param interval: example: 1day. NOT ALL time_range/interval pairs work!
     :return: a list of lists with stock data day by day
     """
 
     # sample DATA url: http://finanse.wp.pl/fundCode,ALT24,range,3L,fundsdata.xml
-    url = 'http://finanse.wp.pl/fundCode,' + fundID + ',range,' + timeRange + ',fundsdata.xml'
-    print "Url visited: " + url
+    url = 'http://finanse.wp.pl/fundCode,' + fund_id + ',range,' + time_range + ',fundsdata.xml'
     xml = urllib2.urlopen(url)
     dom = minidom.parse(xml)
-    dataByDays = dom.getElementsByTagName('item')
+    xml_data = dom.getElementsByTagName('item')
 
-    dates, prices = [], []
+    dates = [_format_date(day.getAttribute('time')) for day in xml_data]
+    prices = [float(day.getAttribute('kurs1_1')) for day in xml_data]
 
-    for day in dataByDays:
-        raw_day = day.getAttribute('time')
-        day_formatted = datetime.datetime.strptime(raw_day, "%Y-%m-%d")  # 2011-11-14
-        dates.append(day_formatted)
-        prices.append(float(day.getAttribute('kurs1_1')))
+    fund_data = [[date, prices[dates.index(date)]] for date in dates]
 
-    returnList = []
-
-    i = 0
-    for date in dates:
-        dayItem = [date, prices[i]]
-        returnList.append(dayItem)
-        i += 1
-
-    return returnList
+    return fund_data
 
 
-def prepareData(fundName, timeRange="1R", interval="1day"):
+def get_date_and_price_data(fund_name, time_range="1R", interval="1day"):
     """ Prepares stock data to be drawn on a chart. Takes whole stock data and returns only price and date lists.
 
-    :param fundName: fund to be displayed
+    :param fund_name: fund to be displayed
     :return: price and date lists
     """
     try:
-        fundID = getIDforFund(fundName)
-        print "Downloading data..."
-        fundData = getFundData(fundID, timeRange, interval)
+        fund_id = get_id_for_fund(fund_name)
+        fund_data = get_fund_data(fund_id, time_range, interval)
 
-        dates = []
-        prices = []
-
-        for day in fundData:
-            dates.append(day[0])
-            prices.append(day[1])
+        dates = [day[0] for day in fund_data]
+        prices = [day[1] for day in fund_data]
 
         return dates, prices
 
-    except Exception, e:
-        print "Could not get fund data."
-        print e
+    except:
+        raise Exception('Could not get the data in get_date_and_price_data()')

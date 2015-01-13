@@ -90,9 +90,6 @@ def get_stock_data(stock_id, time_range="1R", interval="1d"):
     :return: a list of lists with stock data day by day
     """
     url = 'http://finanse.wp.pl/isin,' + stock_id + ',range,' + time_range + ',split,1,int,' + interval + ',graphdata.xml'
-
-    print "Visited URL: " + url
-
     xml = urllib2.urlopen(url)
     dom = minidom.parse(xml)
     xml_data = dom.getElementsByTagName('item')
@@ -107,7 +104,12 @@ def get_stock_data(stock_id, time_range="1R", interval="1d"):
     parsed_data = []
 
     for date in dates:
-        parsed_data.append([date, close_prices[date], high_prices[date], low_prices[date], open_prices[date], volume[date]])
+        parsed_data.append([date,
+                            close_prices[dates.index(date)],
+                            high_prices[dates.index(date)],
+                            low_prices[dates.index(date)],
+                            open_prices[dates.index(date)],
+                            volume[dates.index(date)]])
 
     return parsed_data
 
