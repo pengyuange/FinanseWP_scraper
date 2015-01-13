@@ -25,10 +25,10 @@ import csv
 import urllib2
 from xml.dom import minidom
 
-def get_stock_names():
-    """ Returns 2 lists - fund names and fund IDs
 
-    :return: list names, list ids.
+def get_stock_names():
+    """ Returns a dictionary with stock names and IDs
+    :return: dictionary (name: stockID).
     """
     try:
         page = urllib2.urlopen("http://finanse.wp.pl/isin,PLOPTTC00019,stocks.xml")
@@ -39,25 +39,33 @@ def get_stock_names():
 
     names = [str(name.getAttribute('name')) for name in stocks]
     ids = [str(name.getAttribute('value')) for name in stocks]
+    data = dict(zip(names, ids))
 
-    return names, ids
+    # remove trash data
+    for name in data.keys():
+        digit_counter = list(name)
+        digit_counter = filter(lambda x: x in '1234567890', digit_counter)
+        num_digits = len(digit_counter)
+        if num_digits >= 3:
+            data.pop(name)
+
+    return data
 
 
 def get_stock_names_csv():
     """ Saves a list of stock names to csv
     """
 
-    names, ids = get_stock_names()
+    data = get_stock_names()
 
     try:
         os.remove('names.csv')
     except:
         pass
 
-    lists = zip(names, ids)
-    with open('names.csv', 'w') as file:
-        csv_writer = csv.writer(file)
-        csv_writer.writerows(lists)
+    with open('names.csv', 'w') as f:
+        csv_writer = csv.writer(f)
+        csv_writer.writerows(data)
 
 
 def get_fund_names():
